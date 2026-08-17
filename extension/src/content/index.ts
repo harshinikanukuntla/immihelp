@@ -39,7 +39,7 @@ import { diagnose } from '../adapters/linkedin';
 import { guard, type JobBoardAdapter } from '../adapters/types';
 import { Panel, PANEL_HOST_ID } from './panel';
 import { detectSponsorshipSignal } from '../lib/sponsorship-phrases';
-import { send, type Settings } from '../lib/messages';
+import { DEFAULT_SETTINGS, send, type Settings } from '../lib/messages';
 import type { PageContext, PostingSignal, ResumeMatch } from '../types/domain';
 
 const DEBOUNCE_MS = 400;
@@ -53,15 +53,41 @@ let renderKey: string | null = null;
 let generation = 0;
 let debounceTimer: number | undefined;
 let attempts = 0;
+/** Tracked separately from `attempts`: extraction succeeding and mounting failing
+ *  are different faults with different fixes, and the logs say which. */
+let anchorAttempts = 0;
 let settings: Settings | null = null;
+
+/**
+ * Unconditional, so "did the content script run at all?" is answerable from the
+ * console. Distinguishing that from "it ran and found nothing" was previously
+ * impossible, and the two have completely different fixes.
+ */
+console.info(`[SponsorScope] content script loaded on ${location.pathname}`);
 
 void start();
 
 async function start(): Promise<void> {
   const response = await send({ type: 'get_settings' });
-  if (!response.ok) return;
-  settings = response.settings;
-  if (!settings.enabled) return;
+
+  if (response.ok) {
+    settings = response.settings;
+  } else {
+    // Previously this returned, permanently disabling the panel with no log.
+    // The service worker can be cold, mid-restart, or updating when a page
+    // loads, and a transient messaging failure must not take the page out for
+    // its whole lifetime. Defaults are safe: they are what a fresh install uses.
+    console.warn(
+      '[SponsorScope] could not read settings, continuing with defaults:',
+      response.error,
+    );
+    settings = { ...DEFAULT_SETTINGS };
+  }
+
+  if (!settings.enabled) {
+    console.info('[SponsorScope] panel disabled in settings');
+    return;
+  }
 
   observe();
   schedule();
@@ -93,6 +119,7 @@ function schedule(): void {
 function resetForNavigation(): void {
   renderKey = null;
   attempts = 0;
+  anchorAttempts = 0;
   generation += 1;
 }
 
@@ -130,12 +157,24 @@ async function tick(): Promise<void> {
 
   const anchor = guard('findPanelAnchor', () => adapter.findPanelAnchor(context.pageType, document));
   if (!anchor) {
-    // Data without a place to put it. Try again shortly; the layout container
-    // often mounts a frame after the content.
+    // Data without a place to put it. The layout container often mounts a frame
+    // after the content, so retrying is right — but this retry used to be
+    // unbounded and silent, spinning every 400ms forever with no way to tell it
+    // apart from a page where nothing had run at all.
     renderKey = null;
-    window.setTimeout(() => void tick(), DEBOUNCE_MS);
+    if (anchorAttempts++ < MAX_EXTRACT_ATTEMPTS) {
+      window.setTimeout(() => void tick(), DEBOUNCE_MS);
+    } else if (anchorAttempts === MAX_EXTRACT_ATTEMPTS + 1) {
+      console.warn(
+        `[SponsorScope] Read this ${context.pageType} successfully but found nowhere ` +
+          `to mount the panel after ${MAX_EXTRACT_ATTEMPTS} attempts.`,
+        { company: context.company.name },
+      );
+      if (adapter.id === 'linkedin') console.table(diagnose(document));
+    }
     return;
   }
+  anchorAttempts = 0;
 
   const view = ensurePanel();
   mount(view, anchor);

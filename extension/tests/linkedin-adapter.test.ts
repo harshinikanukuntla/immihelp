@@ -12,6 +12,7 @@ import { JSDOM } from 'jsdom';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { linkedInAdapter } from '../src/adapters/linkedin';
 import { cleanCompanyName, companyWebsite, jobKey } from '../src/adapters/linkedin';
+import { detectSponsorshipSignal } from '../src/lib/sponsorship-phrases';
 
 function docFrom(html: string): Document {
   return new JSDOM(html).window.document;
@@ -106,6 +107,100 @@ describe('extract — job posting', () => {
     const context = linkedInAdapter.extract(new URL('https://www.linkedin.com/jobs/view/1'), partial);
     expect(context).not.toBeNull();
     expect(context!.jobDescription).toBeUndefined();
+  });
+});
+
+/**
+ * The class names above are cosmetic and LinkedIn churns them. On a live page
+ * every single named selector missed while the markup was perfectly readable —
+ * so extraction also has a structural path that keys on what elements *are*
+ * (a link to /company/<slug>, an h1, the longest text block) rather than what
+ * they are currently called.
+ *
+ * These fixtures deliberately contain no recognisable SponsorScope selector.
+ */
+describe('extract — structural fallback when every class name has changed', () => {
+  const RESTYLED = `
+    <main>
+      <div class="jobs-search__job-details--wrapper">
+        <div class="xyz-9f2a">
+          <h1 class="abc-1234">Technical Lead Manager</h1>
+          <div class="def-5678"><a href="/company/instabase/">Instabase</a></div>
+          <span class="ghi-9012">San Francisco, CA · Reposted 4 days ago</span>
+        </div>
+        <div class="jkl-3456">
+          <p>At Instabase, we are democratizing access to AI innovation for any
+          organization solving unstructured data problems. We work with some of the
+          largest and most complex organizations in the world, and our investors
+          include Greylock, Andreessen Horowitz, and Index Ventures. You will lead a
+          team of engineers building the platform. Visa sponsorship available for
+          exceptional candidates. We are looking for someone with deep distributed
+          systems experience and a track record of shipping.</p>
+        </div>
+      </div>
+    </main>
+  `;
+
+  const url = new URL('https://www.linkedin.com/jobs/search-results/?currentJobId=4435306847');
+
+  it('finds the company from the /company/ link rather than a class name', () => {
+    const context = linkedInAdapter.extract(url, docFrom(RESTYLED));
+    expect(context).not.toBeNull();
+    expect(context!.company.name).toBe('Instabase');
+    expect(context!.company.slug).toBe('instabase');
+  });
+
+  it('finds the title from the h1', () => {
+    expect(linkedInAdapter.extract(url, docFrom(RESTYLED))!.jobTitle).toBe(
+      'Technical Lead Manager',
+    );
+  });
+
+  it('finds the description as the longest text block', () => {
+    const description = linkedInAdapter.extract(url, docFrom(RESTYLED))!.jobDescription;
+    expect(description).toContain('Visa sponsorship available');
+  });
+
+  it('feeds the phrase detector well enough to produce a signal', () => {
+    // End to end through the piece users actually read.
+    const context = linkedInAdapter.extract(url, docFrom(RESTYLED))!;
+    expect(detectSponsorshipSignal(context.jobDescription!).polarity).toBe('positive');
+  });
+
+  it('still finds somewhere to mount the panel', () => {
+    // Extraction succeeding with no anchor used to spin silently forever.
+    expect(linkedInAdapter.findPanelAnchor('job_posting', docFrom(RESTYLED))).not.toBeNull();
+  });
+
+  it('ignores /company/ links in the left rail results list', () => {
+    // The results list is full of other companies. Picking the first match in
+    // the document would attribute the wrong employer to the open posting.
+    const withRail = docFrom(`
+      <main>
+        <ul class="results">
+          <li><a href="/company/runpod/">Runpod</a></li>
+          <li><a href="/company/liatrio/">Liatrio</a></li>
+        </ul>
+        <div class="jobs-search__job-details--wrapper">
+          <h1>Technical Lead Manager</h1>
+          <div><a href="/company/instabase/">Instabase</a></div>
+        </div>
+      </main>
+    `);
+    expect(linkedInAdapter.extract(url, withRail)!.company.name).toBe('Instabase');
+  });
+
+  it('does not mistake navigation chrome for a description', () => {
+    const sparse = docFrom(`
+      <main>
+        <div class="jobs-search__job-details--wrapper">
+          <h1>Some Role</h1>
+          <div><a href="/company/acme/">Acme</a></div>
+          <div><a href="#">See all jobs</a></div>
+        </div>
+      </main>
+    `);
+    expect(linkedInAdapter.extract(url, sparse)!.jobDescription).toBeUndefined();
   });
 });
 
