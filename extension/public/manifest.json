@@ -1,0 +1,62 @@
+{
+  "manifest_version": 3,
+  "name": "SponsorScope",
+  "version": "0.1.0",
+  "description": "Visa sponsorship history, on-device resume matching, and referral links on job postings. No account, no tracking.",
+  "homepage_url": "https://github.com/your-org/sponsorscope",
+
+  "permissions": ["storage", "activeTab", "offscreen"],
+
+  "host_permissions": ["https://api.sponsorscope.dev/*"],
+
+  "optional_host_permissions": ["https://*/*"],
+
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.linkedin.com/jobs/view/*",
+        "https://www.linkedin.com/jobs/search/*",
+        "https://www.linkedin.com/jobs/collections/*",
+        "https://www.linkedin.com/company/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "SponsorScope"
+  },
+
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+
+  "web_accessible_resources": [
+    {
+      "resources": ["models/*", "wasm/*"],
+      "matches": ["https://www.linkedin.com/*"]
+    }
+  ],
+
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  },
+
+  "minimum_chrome_version": "116"
+}

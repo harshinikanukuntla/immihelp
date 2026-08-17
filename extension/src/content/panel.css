@@ -1,0 +1,359 @@
+/**
+ * Panel styles. Injected into a shadow root, so nothing here leaks into the host
+ * page and none of LinkedIn's cascade reaches in.
+ *
+ * Every value comes from a token custom property. If you are about to type a hex
+ * code or a pixel value into this file, add it to src/design/tokens.ts instead.
+ */
+
+:host {
+  all: initial;
+  display: block;
+  contain: content;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.ss-root {
+  font-family: var(--ss-font-family);
+  font-size: var(--ss-font-size-base);
+  line-height: var(--ss-line-base);
+  color: var(--ss-color-text);
+  background: var(--ss-color-surface);
+  border: 1px solid var(--ss-color-border);
+  border-radius: var(--ss-radius-base);
+  box-shadow: var(--ss-shadow-card);
+  margin: var(--ss-space-md) 0;
+  overflow: hidden;
+}
+
+/* --- Header ---------------------------------------------------------------- */
+
+.ss-header {
+  display: flex;
+  align-items: center;
+  gap: var(--ss-space-sm);
+  padding: var(--ss-space-md) var(--ss-space-lg);
+  border-bottom: 1px solid var(--ss-color-border);
+  background: var(--ss-color-surface-muted);
+}
+
+.ss-wordmark {
+  font-size: var(--ss-font-size-sm);
+  font-weight: var(--ss-font-weight-semibold);
+  color: var(--ss-color-accent);
+  letter-spacing: 0.02em;
+}
+
+.ss-company {
+  font-size: var(--ss-font-size-sm);
+  color: var(--ss-color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ss-header-spacer {
+  flex: 1;
+}
+
+/* --- Sections -------------------------------------------------------------- */
+
+.ss-section {
+  padding: var(--ss-space-lg);
+}
+
+.ss-section + .ss-section {
+  border-top: 1px solid var(--ss-color-border);
+}
+
+.ss-section-title {
+  font-size: var(--ss-font-size-xs);
+  font-weight: var(--ss-font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ss-color-text-muted);
+  margin: 0 0 var(--ss-space-sm);
+}
+
+.ss-headline {
+  font-size: var(--ss-font-size-md);
+  font-weight: var(--ss-font-weight-semibold);
+  color: var(--ss-color-text-strong);
+  margin: 0 0 var(--ss-space-xs);
+}
+
+.ss-body {
+  margin: 0;
+  color: var(--ss-color-text);
+}
+
+.ss-meta {
+  font-size: var(--ss-font-size-sm);
+  color: var(--ss-color-text-muted);
+  margin: var(--ss-space-sm) 0 0;
+}
+
+/* --- Status badge ---------------------------------------------------------- */
+
+/*
+ * Status is never carried by colour alone: each badge pairs its tint with an
+ * icon and a text label, so it survives greyscale, colour blindness, and a
+ * screen reader.
+ */
+.ss-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ss-space-xs);
+  padding: var(--ss-space-xs) var(--ss-space-sm);
+  border-radius: var(--ss-radius-pill);
+  border: 1px solid transparent;
+  font-size: var(--ss-font-size-sm);
+  font-weight: var(--ss-font-weight-medium);
+}
+
+.ss-badge svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+
+.ss-badge--verified {
+  color: var(--ss-status-verified-fg);
+  background: var(--ss-status-verified-bg);
+  border-color: var(--ss-status-verified-border);
+}
+
+.ss-badge--unverified {
+  color: var(--ss-status-unverified-fg);
+  background: var(--ss-status-unverified-bg);
+  border-color: var(--ss-status-unverified-border);
+}
+
+.ss-badge--none {
+  color: var(--ss-status-none-fg);
+  background: var(--ss-status-none-bg);
+  border-color: var(--ss-status-none-border);
+}
+
+.ss-badge--negative {
+  color: var(--ss-status-negative-fg);
+  background: var(--ss-status-negative-bg);
+  border-color: var(--ss-status-negative-border);
+}
+
+/*
+ * The verified and unverified badges must never be mistaken for one another.
+ * Beyond hue, the verified badge is solid-bordered and the unverified badge is
+ * dashed — a second, non-colour channel carrying the same distinction.
+ */
+.ss-badge--unverified {
+  border-style: dashed;
+}
+
+/* --- Metrics --------------------------------------------------------------- */
+
+.ss-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--ss-space-md);
+  margin: var(--ss-space-md) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ss-metric {
+  background: var(--ss-color-surface-muted);
+  border: 1px solid var(--ss-color-border);
+  border-radius: var(--ss-radius-base);
+  padding: var(--ss-space-sm) var(--ss-space-md);
+}
+
+.ss-metric-value {
+  font-size: var(--ss-font-size-lg);
+  font-weight: var(--ss-font-weight-semibold);
+  color: var(--ss-color-text-strong);
+}
+
+.ss-metric-label {
+  font-size: var(--ss-font-size-xs);
+  color: var(--ss-color-text-muted);
+}
+
+/* --- Provenance ------------------------------------------------------------ */
+
+.ss-source {
+  font-size: var(--ss-font-size-sm);
+  color: var(--ss-color-text-muted);
+  margin: var(--ss-space-sm) 0 0;
+}
+
+.ss-source a {
+  color: var(--ss-color-accent);
+}
+
+/* --- Evidence quote -------------------------------------------------------- */
+
+.ss-quote {
+  margin: var(--ss-space-sm) 0 0;
+  padding: var(--ss-space-sm) var(--ss-space-md);
+  border-left: 3px solid var(--ss-status-unverified-border);
+  background: var(--ss-color-surface-muted);
+  border-radius: 0 var(--ss-radius-base) var(--ss-radius-base) 0;
+  font-size: var(--ss-font-size-sm);
+  color: var(--ss-color-text);
+}
+
+/* --- Resume match ---------------------------------------------------------- */
+
+.ss-score-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ss-space-sm);
+}
+
+.ss-score {
+  font-size: 28px;
+  font-weight: var(--ss-font-weight-semibold);
+  color: var(--ss-color-accent);
+  line-height: var(--ss-line-tight);
+}
+
+.ss-score-suffix {
+  font-size: var(--ss-font-size-sm);
+  color: var(--ss-color-text-muted);
+}
+
+.ss-meter {
+  height: 6px;
+  border-radius: var(--ss-radius-pill);
+  background: var(--ss-status-none-bg);
+  margin: var(--ss-space-sm) 0;
+  overflow: hidden;
+}
+
+.ss-meter-fill {
+  height: 100%;
+  background: var(--ss-color-accent);
+  border-radius: var(--ss-radius-pill);
+}
+
+.ss-gaps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ss-space-xs);
+  margin: var(--ss-space-sm) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ss-gap {
+  font-size: var(--ss-font-size-xs);
+  padding: 2px var(--ss-space-sm);
+  border-radius: var(--ss-radius-pill);
+  background: var(--ss-color-surface-muted);
+  border: 1px solid var(--ss-color-border);
+  color: var(--ss-color-text-muted);
+}
+
+/* --- Links ----------------------------------------------------------------- */
+
+.ss-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ss-space-sm);
+  margin: var(--ss-space-sm) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ss-link,
+.ss-button {
+  font-family: inherit;
+  font-size: var(--ss-font-size-sm);
+  font-weight: var(--ss-font-weight-medium);
+  color: var(--ss-color-accent);
+  background: var(--ss-color-surface);
+  border: 1px solid var(--ss-color-border-strong);
+  border-radius: var(--ss-radius-base);
+  padding: var(--ss-space-xs) var(--ss-space-md);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.ss-link:hover,
+.ss-button:hover {
+  color: var(--ss-color-accent-hover);
+  background: var(--ss-color-accent-subtle);
+}
+
+.ss-button--ghost {
+  border: none;
+  background: none;
+  padding: var(--ss-space-xs);
+  color: var(--ss-color-text-muted);
+}
+
+.ss-button--ghost:hover {
+  background: none;
+  color: var(--ss-color-accent);
+  text-decoration: underline;
+}
+
+/* Focus is always visible, and offset so it reads against both surfaces. */
+.ss-link:focus-visible,
+.ss-button:focus-visible,
+.ss-root a:focus-visible {
+  outline: 2px solid var(--ss-color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* --- Disclaimer ------------------------------------------------------------ */
+
+.ss-disclaimer {
+  padding: var(--ss-space-sm) var(--ss-space-lg);
+  border-top: 1px solid var(--ss-color-border);
+  background: var(--ss-color-surface-muted);
+  font-size: var(--ss-font-size-xs);
+  color: var(--ss-color-text-muted);
+}
+
+/* --- Loading --------------------------------------------------------------- */
+
+.ss-skeleton {
+  height: 12px;
+  border-radius: var(--ss-radius-pill);
+  background: var(--ss-color-surface-muted);
+  animation: ss-pulse 1.4s var(--ss-motion-easing) infinite;
+}
+
+.ss-skeleton + .ss-skeleton {
+  margin-top: var(--ss-space-sm);
+}
+
+@keyframes ss-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ss-skeleton {
+    animation: none;
+  }
+}
+
+/* Screen-reader-only text, used to give icon-only controls an accessible name. */
+.ss-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

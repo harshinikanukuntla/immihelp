@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>SponsorScope</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="ss-popup">
+      <h1>SponsorScope</h1>
+      <p class="ss-popup-status" id="status" role="status">Checking…</p>
+
+      <ul class="ss-popup-facts">
+        <li id="resume-fact">Resume: checking…</li>
+        <li id="api-fact">Lookup service: checking…</li>
+      </ul>
+
+      <button type="button" class="ss-popup-button" id="open-options">Settings</button>
+
+      <p class="ss-popup-note">
+        Open a LinkedIn job posting or company page to see the panel. Your resume never
+        leaves this device.
+      </p>
+    </main>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

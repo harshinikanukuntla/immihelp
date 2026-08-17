@@ -1,0 +1,205 @@
+/**
+ * Options page styles.
+ *
+ * Imports the same tokens the injected panel uses — the settings page and the
+ * panel are one product and must not drift apart. The tokens file is prepended
+ * at build time (see scripts/build.mjs), so `--ss-*` is available here.
+ */
+
+body {
+  margin: 0;
+  background: var(--ss-color-surface-muted);
+  color: var(--ss-color-text);
+  font-family: var(--ss-font-family);
+  font-size: var(--ss-font-size-md);
+  line-height: var(--ss-line-base);
+}
+
+.ss-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--ss-space-xl) var(--ss-space-lg) 64px;
+}
+
+.ss-page-header h1 {
+  font-size: 24px;
+  color: var(--ss-color-accent);
+  margin: 0 0 var(--ss-space-xs);
+}
+
+.ss-lede {
+  margin: 0 0 var(--ss-space-xl);
+  color: var(--ss-color-text-muted);
+}
+
+.ss-card {
+  background: var(--ss-color-surface);
+  border: 1px solid var(--ss-color-border);
+  border-radius: var(--ss-radius-base);
+  box-shadow: var(--ss-shadow-card);
+  padding: var(--ss-space-lg);
+  margin-bottom: var(--ss-space-lg);
+}
+
+.ss-card h2 {
+  font-size: var(--ss-font-size-lg);
+  margin: 0 0 var(--ss-space-sm);
+  color: var(--ss-color-text-strong);
+}
+
+.ss-help {
+  font-size: var(--ss-font-size-sm);
+  color: var(--ss-color-text-muted);
+  margin: 0 0 var(--ss-space-md);
+}
+
+.ss-status {
+  font-size: var(--ss-font-size-sm);
+  color: var(--ss-color-text-muted);
+  margin: 0 0 var(--ss-space-md);
+  min-height: 1.4em;
+}
+
+.ss-status--ok {
+  color: var(--ss-status-verified-fg);
+}
+
+.ss-status--warn {
+  color: var(--ss-status-unverified-fg);
+}
+
+.ss-label {
+  display: block;
+  font-size: var(--ss-font-size-sm);
+  font-weight: var(--ss-font-weight-medium);
+  margin-bottom: var(--ss-space-xs);
+}
+
+.ss-textarea,
+.ss-input {
+  width: 100%;
+  font-family: var(--ss-font-family);
+  font-size: var(--ss-font-size-base);
+  color: var(--ss-color-text);
+  background: var(--ss-color-surface);
+  border: 1px solid var(--ss-color-border-strong);
+  border-radius: var(--ss-radius-base);
+  padding: var(--ss-space-sm) var(--ss-space-md);
+  resize: vertical;
+}
+
+.ss-textarea:focus-visible,
+.ss-input:focus-visible,
+.ss-button:focus-visible,
+input[type='checkbox']:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--ss-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.ss-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ss-space-sm);
+  margin-top: var(--ss-space-md);
+}
+
+.ss-button {
+  font-family: inherit;
+  font-size: var(--ss-font-size-base);
+  font-weight: var(--ss-font-weight-medium);
+  color: var(--ss-color-accent);
+  background: var(--ss-color-surface);
+  border: 1px solid var(--ss-color-border-strong);
+  border-radius: var(--ss-radius-base);
+  padding: var(--ss-space-sm) var(--ss-space-lg);
+  cursor: pointer;
+}
+
+.ss-button:hover {
+  background: var(--ss-color-accent-subtle);
+}
+
+.ss-button--primary {
+  background: var(--ss-color-accent);
+  border-color: var(--ss-color-accent);
+  color: #ffffff;
+}
+
+.ss-button--primary:hover {
+  background: var(--ss-color-accent-hover);
+  border-color: var(--ss-color-accent-hover);
+}
+
+.ss-button--danger {
+  color: var(--ss-status-negative-fg);
+  border-color: var(--ss-status-negative-border);
+}
+
+.ss-button--danger:hover {
+  background: var(--ss-status-negative-bg);
+}
+
+.ss-toggle {
+  display: flex;
+  gap: var(--ss-space-md);
+  padding: var(--ss-space-md) 0;
+  border-top: 1px solid var(--ss-color-border);
+}
+
+.ss-toggle:first-of-type {
+  border-top: none;
+}
+
+.ss-toggle input[type='checkbox'] {
+  margin-top: 3px;
+  accent-color: var(--ss-color-accent);
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.ss-toggle label {
+  font-size: var(--ss-font-size-base);
+  font-weight: var(--ss-font-weight-medium);
+  cursor: pointer;
+}
+
+.ss-toggle .ss-help {
+  display: block;
+  font-weight: var(--ss-font-weight-regular);
+  margin: var(--ss-space-xs) 0 0;
+}
+
+.ss-list {
+  margin: 0;
+  padding-left: var(--ss-space-lg);
+  font-size: var(--ss-font-size-base);
+}
+
+.ss-list li + li {
+  margin-top: var(--ss-space-sm);
+}
+
+a {
+  color: var(--ss-color-accent);
+}
+
+.ss-page-footer {
+  font-size: var(--ss-font-size-sm);
+  color: var(--ss-color-text-muted);
+  text-align: center;
+  padding: 0 var(--ss-space-lg);
+}
+
+.ss-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

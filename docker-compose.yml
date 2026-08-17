@@ -1,0 +1,40 @@
+# Local development dependencies.
+#
+#   docker compose up -d
+#
+# Postgres and Redis, nothing else. If you would rather run them natively,
+# install both and point SPONSORSCOPE_DATABASE_URL / SPONSORSCOPE_REDIS_URL at
+# your instances — the backend does not care which you use.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: sponsorscope
+      POSTGRES_PASSWORD: sponsorscope
+      POSTGRES_DB: sponsorscope
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U sponsorscope']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    # Redis holds only the lookup cache and the rate-limit counters, both of
+    # which are safe to lose, so persistence is off.
+    command: redis-server --save '' --appendonly no
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:

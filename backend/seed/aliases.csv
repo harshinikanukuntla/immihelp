@@ -1,0 +1,45 @@
+# Curated company aliases.
+#
+# These bridge the gap between the brand name a job board shows and the legal
+# entity name a government filing uses. String similarity cannot cross that gap
+# — "Amazon" and "AMAZON.COM SERVICES LLC" are not close under any metric — and
+# lowering the match thresholds until it could would start matching "Apple" to
+# "Apple Bank for Savings". Curated aliases are the correct fix.
+#
+# Format: canonical_name,alias,country
+#   canonical_name  the legal name as it appears in the government data
+#   alias           the name a job board is likely to show
+#   country         ISO 3166-1 alpha-2 of the filing jurisdiction
+#
+# Load with:  python -m etl.run seed-aliases --file seed/aliases.csv
+# Rows whose canonical_name is not already in the database are skipped with a
+# warning — ingest the government data first.
+#
+# Contributions welcome; this list is nowhere near complete. See
+# docs/adding-a-country.md for how aliases fit into the resolution pipeline.
+
+canonical_name,alias,country
+AMAZON.COM SERVICES LLC,Amazon,US
+AMAZON WEB SERVICES INC,AWS,US
+GOOGLE LLC,Google,US
+GOOGLE LLC,Alphabet,US
+META PLATFORMS INC,Meta,US
+META PLATFORMS INC,Facebook,US
+MICROSOFT CORPORATION,Microsoft,US
+APPLE INC,Apple,US
+INTERNATIONAL BUSINESS MACHINES CORPORATION,IBM,US
+ALPHABET INC,Google,US
+X CORP,Twitter,US
+BLOCK INC,Square,US
+ALPHABET INC,YouTube,US
+COGNIZANT TECHNOLOGY SOLUTIONS US CORP,Cognizant,US
+TATA CONSULTANCY SERVICES LIMITED,TCS,US
+INFOSYS LIMITED,Infosys,US
+WIPRO LIMITED,Wipro,US
+HCL AMERICA INC,HCLTech,US
+ACCENTURE LLP,Accenture,US
+DELOITTE CONSULTING LLP,Deloitte,US
+ERNST & YOUNG U.S. LLP,EY,US
+PRICEWATERHOUSECOOPERS LLP,PwC,US
+JPMORGAN CHASE & CO,JPMorgan,US
+GOLDMAN SACHS & CO. LLC,Goldman Sachs,US

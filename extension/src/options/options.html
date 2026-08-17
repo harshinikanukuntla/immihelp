@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SponsorScope settings</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main class="ss-root ss-page">
+      <header class="ss-page-header">
+        <h1>SponsorScope</h1>
+        <p class="ss-lede">
+          Sponsorship signals from public government data, with resume matching that runs
+          entirely on your own machine.
+        </p>
+      </header>
+
+      <section class="ss-card" aria-labelledby="resume-heading">
+        <h2 id="resume-heading">Your resume</h2>
+        <p class="ss-help">
+          Used to score how closely your background matches a job description. It is stored
+          only in this browser, is never sent to our servers, and there is no account to
+          attach it to. Removing it deletes the text and everything computed from it.
+        </p>
+
+        <p class="ss-status" id="resume-status" role="status">Checking…</p>
+
+        <label class="ss-label" for="resume-text">Paste your resume text</label>
+        <textarea
+          id="resume-text"
+          class="ss-textarea"
+          rows="12"
+          placeholder="Paste the plain text of your resume here."
+          aria-describedby="resume-help"
+        ></textarea>
+        <p class="ss-help" id="resume-help">
+          Plain text works best. Formatting, images, and columns are ignored by the model.
+        </p>
+
+        <div class="ss-actions">
+          <button type="button" class="ss-button ss-button--primary" id="save-resume">
+            Save resume
+          </button>
+          <label class="ss-button" for="resume-file">
+            Load from .txt file
+            <input type="file" id="resume-file" accept=".txt,text/plain" class="ss-sr-only" />
+          </label>
+          <button type="button" class="ss-button ss-button--danger" id="delete-resume">
+            Delete my resume
+          </button>
+        </div>
+      </section>
+
+      <section class="ss-card" aria-labelledby="features-heading">
+        <h2 id="features-heading">What the panel shows</h2>
+
+        <div class="ss-toggle">
+          <input type="checkbox" id="enabled" />
+          <label for="enabled">
+            Show the SponsorScope panel
+            <span class="ss-help">Turn everything off without uninstalling.</span>
+          </label>
+        </div>
+
+        <div class="ss-toggle">
+          <input type="checkbox" id="postingScanEnabled" />
+          <label for="postingScanEnabled">
+            Read sponsorship wording from the posting
+            <span class="ss-help">
+              Scans the job description text for sponsorship statements. Always labelled as
+              unverified, since it is the employer's own claim.
+            </span>
+          </label>
+        </div>
+
+        <div class="ss-toggle">
+          <input type="checkbox" id="resumeMatchEnabled" />
+          <label for="resumeMatchEnabled">
+            Score my resume against the posting
+            <span class="ss-help">Runs on-device. Requires a saved resume.</span>
+          </label>
+        </div>
+
+        <div class="ss-toggle">
+          <input type="checkbox" id="deepLinksEnabled" />
+          <label for="deepLinksEnabled">
+            Show interview and referral links
+            <span class="ss-help">
+              Builds search links to Glassdoor, Blind, and LinkedIn. Nothing is searched
+              until you click.
+            </span>
+          </label>
+        </div>
+      </section>
+
+      <section class="ss-card" aria-labelledby="advanced-heading">
+        <h2 id="advanced-heading">Lookup service</h2>
+        <p class="ss-help">
+          The sponsorship API is open source and stores nothing about who asks. Point this
+          at your own deployment if you would rather not use the public one.
+        </p>
+        <label class="ss-label" for="apiBaseUrl">API base URL</label>
+        <input type="url" id="apiBaseUrl" class="ss-input" spellcheck="false" />
+        <div class="ss-actions">
+          <button type="button" class="ss-button" id="save-api">Save</button>
+          <button type="button" class="ss-button" id="reset-api">Reset to default</button>
+        </div>
+        <p class="ss-status" id="api-status" role="status"></p>
+      </section>
+
+      <section class="ss-card" aria-labelledby="privacy-heading">
+        <h2 id="privacy-heading">What leaves your device</h2>
+        <ul class="ss-list">
+          <li>
+            <strong>Sent:</strong> the company name shown on the posting, and its country
+            when we can tell. Nothing else.
+          </li>
+          <li>
+            <strong>Never sent:</strong> your resume, the job description, the page URL, any
+            identifier, or any cookie. The API sets none.
+          </li>
+          <li>
+            <strong>Stored on our side:</strong> a daily count per company name, so we know
+            which companies to prioritise. It is not joinable to a person.
+          </li>
+        </ul>
+        <p class="ss-help">
+          <a href="https://github.com/your-org/sponsorscope/blob/main/docs/privacy.md"
+             target="_blank" rel="noopener noreferrer">Full privacy documentation</a>
+          ·
+          <a href="https://github.com/your-org/sponsorscope" target="_blank" rel="noopener noreferrer">
+            Source code (MIT)
+          </a>
+        </p>
+      </section>
+
+      <footer class="ss-page-footer">
+        SponsorScope provides informational signals based on historical public data. It is
+        not legal or immigration advice, and sponsorship history is not a guarantee of
+        current company policy.
+      </footer>
+    </main>
+
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

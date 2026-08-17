@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>SponsorScope embedding worker</title>
+  </head>
+  <body>
+    <!--
+      Invisible host for the sentence-embedding model. It has no UI and is never
+      shown to the user; it exists because the MV3 service worker is evicted
+      while idle and would reload a 20MB model on every wake-up. See
+      src/background/index.ts for the lifecycle.
+    -->
+    <script type="module" src="offscreen.js"></script>
+  </body>
+</html>

@@ -1,0 +1,56 @@
+/**
+ * GENERATED FILE — DO NOT EDIT.
+ * Source: src/design/tokens.ts. Regenerate with `npm run build:tokens`.
+ */
+:root,
+:host,
+.ss-root {
+  --ss-color-surface: #FFFFFF;
+  --ss-color-surface-muted: #F8F9FA;
+  --ss-color-border: #E4E6E8;
+  --ss-color-border-strong: #D0D3D6;
+  --ss-color-text: #1A1A1A;
+  --ss-color-text-strong: #202124;
+  --ss-color-text-muted: #5F6368;
+  --ss-color-accent: #0F766E;
+  --ss-color-accent-hover: #0B5C55;
+  --ss-color-accent-subtle: #F0FDFA;
+  --ss-color-focus-ring: #0F766E;
+  --ss-status-verified-fg: #15803D;
+  --ss-status-verified-bg: #DCFCE7;
+  --ss-status-verified-border: #BBF7D0;
+  --ss-status-unverified-fg: #B45309;
+  --ss-status-unverified-bg: #FEF3C7;
+  --ss-status-unverified-border: #FDE68A;
+  --ss-status-none-fg: #5F6368;
+  --ss-status-none-bg: #F3F4F6;
+  --ss-status-none-border: #E5E7EB;
+  --ss-status-negative-fg: #B91C1C;
+  --ss-status-negative-bg: #FEE2E2;
+  --ss-status-negative-border: #FECACA;
+  --ss-space-xs: 4px;
+  --ss-space-sm: 8px;
+  --ss-space-md: 12px;
+  --ss-space-lg: 16px;
+  --ss-space-xl: 24px;
+  --ss-radius-base: 8px;
+  --ss-radius-pill: 999px;
+  --ss-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --ss-shadow-raised: 0 2px 8px rgba(0, 0, 0, 0.10);
+  --ss-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --ss-font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --ss-font-size-xs: 11px;
+  --ss-font-size-sm: 12px;
+  --ss-font-size-base: 13px;
+  --ss-font-size-md: 14px;
+  --ss-font-size-lg: 16px;
+  --ss-font-weight-regular: 400;
+  --ss-font-weight-medium: 500;
+  --ss-font-weight-semibold: 600;
+  --ss-line-tight: 1.3;
+  --ss-line-base: 1.5;
+  --ss-motion-fast: 120ms;
+  --ss-motion-base: 200ms;
+  --ss-motion-easing: cubic-bezier(0.4, 0, 0.2, 1);
+  --ss-z-panel: 900;
+}

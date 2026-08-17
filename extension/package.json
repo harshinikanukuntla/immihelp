@@ -1,0 +1,29 @@
+{
+  "name": "sponsorscope-extension",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "description": "SponsorScope browser extension — visa sponsorship signals and on-device resume matching for job postings.",
+  "type": "module",
+  "scripts": {
+    "build:tokens": "node scripts/build-tokens.mjs",
+    "build:icons": "node scripts/make-icons.mjs",
+    "build": "npm run build:tokens && npm run build:icons && node scripts/build.mjs",
+    "dev": "npm run build:tokens && node scripts/build.mjs --watch",
+    "fetch:model": "node scripts/fetch-model.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^3.3.3"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.304",
+    "@types/jsdom": "^30.0.0",
+    "esbuild": "^0.25.0",
+    "jsdom": "^30.0.1",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
+}
