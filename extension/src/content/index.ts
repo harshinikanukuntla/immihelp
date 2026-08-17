@@ -35,7 +35,8 @@
  * observer fires far more often than the page actually changes.
  */
 import { adapterFor } from '../adapters/registry';
-import { guard } from '../adapters/types';
+import { diagnose } from '../adapters/linkedin';
+import { guard, type JobBoardAdapter } from '../adapters/types';
 import { Panel, PANEL_HOST_ID } from './panel';
 import { detectSponsorshipSignal } from '../lib/sponsorship-phrases';
 import { send, type Settings } from '../lib/messages';
@@ -107,7 +108,14 @@ async function tick(): Promise<void> {
   if (!context) {
     // The pane may not have rendered yet. Retry a bounded number of times rather
     // than either giving up immediately or spinning forever on a changed DOM.
-    if (attempts++ < MAX_EXTRACT_ATTEMPTS) window.setTimeout(() => void tick(), DEBOUNCE_MS);
+    if (attempts++ < MAX_EXTRACT_ATTEMPTS) {
+      window.setTimeout(() => void tick(), DEBOUNCE_MS);
+    } else if (attempts === MAX_EXTRACT_ATTEMPTS + 1) {
+      // Repeated failure on a page we do claim means the site's DOM moved.
+      // Print which selectors still match so the fix is a one-line edit rather
+      // than an investigation — see docs/adding-a-job-board.md.
+      reportSelectorRot(adapter, pageType);
+    }
     return;
   }
 
@@ -230,4 +238,25 @@ function ensureAnchored(anchor: Element | null): void {
 function removePanel(): void {
   panel?.host.remove();
   renderKey = null;
+}
+
+/**
+ * Prints a selector report when a page we claim yields nothing.
+ *
+ * Silence is the worst outcome here: a stale selector and a content script that
+ * never injected look identical from the outside. This distinguishes them and
+ * names the field that broke.
+ */
+function reportSelectorRot(adapter: JobBoardAdapter, pageType: PageContext['pageType']): void {
+  console.warn(
+    `[SponsorScope] Could not read this ${pageType} on ${adapter.label} after ` +
+      `${MAX_EXTRACT_ATTEMPTS} attempts. The site's markup has probably changed.`,
+  );
+  if (adapter.id === 'linkedin') {
+    console.table(diagnose(document));
+    console.warn(
+      '[SponsorScope] Add the current class name to the front of the failing ' +
+        'group in src/adapters/linkedin.ts, then rebuild.',
+    );
+  }
 }

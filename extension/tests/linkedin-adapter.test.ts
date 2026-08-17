@@ -39,6 +39,9 @@ describe('detectPageType', () => {
   const cases: Array<[string, string | null]> = [
     ['https://www.linkedin.com/jobs/view/123456/', 'job_posting'],
     ['https://www.linkedin.com/jobs/search/?currentJobId=99', 'job_posting'],
+    // LinkedIn serves the same two-pane UI from this path. Missing it meant the
+    // panel never appeared for anyone browsing job recommendations.
+    ['https://www.linkedin.com/jobs/search-results/?currentJobId=99', 'job_posting'],
     ['https://www.linkedin.com/jobs/collections/recommended/', 'job_posting'],
     ['https://www.linkedin.com/company/acme-corp/', 'company'],
     ['https://www.linkedin.com/feed/', null],

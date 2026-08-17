@@ -126,15 +126,17 @@ async function copyModelRuntime() {
   await mkdir(wasmDir, { recursive: true });
 
   let copied = 0;
+  let bytes = 0;
+
   for (const candidate of candidates) {
     const source = resolve(root, candidate);
     if (!existsSync(source)) continue;
-    const { readdir } = await import('node:fs/promises');
+    const { readdir, stat } = await import('node:fs/promises');
     for (const name of await readdir(source)) {
-      if (name.endsWith('.wasm') || name.endsWith('.mjs')) {
-        await cp(resolve(source, name), resolve(wasmDir, name));
-        copied += 1;
-      }
+      if (!isRuntimeArtifact(name)) continue;
+      await cp(resolve(source, name), resolve(wasmDir, name));
+      copied += 1;
+      bytes += (await stat(resolve(source, name))).size;
     }
   }
 
@@ -143,7 +145,28 @@ async function copyModelRuntime() {
       'WARNING: no ONNX Runtime WASM files found. Resume matching will not work.\n' +
         '         Run `npm install`, then `npm run fetch:model`.',
     );
+    return;
   }
+
+  console.log(`  copied ${copied} runtime files (${(bytes / 1024 / 1024).toFixed(1)}MB) to dist/wasm`);
+}
+
+/**
+ * Selects only the ONNX Runtime artifacts loaded at runtime from `wasmPaths`.
+ *
+ * The published `dist` directory also contains WebGL, WebGPU, Node, and bundled
+ * browser builds of the runtime's *JavaScript*, none of which apply here: the JS
+ * is already bundled into `offscreen.js` by esbuild, and the offscreen document
+ * uses the WASM execution provider. Copying the whole directory adds ~23MB of
+ * files nothing ever requests.
+ *
+ * Both the plain and the `.jsep` Emscripten builds are kept. ORT picks between
+ * them at load time based on capability detection, and shipping only one risks a
+ * 404 that surfaces as "the model could not run" rather than as a build error.
+ * Each build needs its sibling `.mjs` glue alongside the `.wasm` binary.
+ */
+function isRuntimeArtifact(name) {
+  return /^ort-wasm.*\.(wasm|mjs)$/.test(name);
 }
 
 /**

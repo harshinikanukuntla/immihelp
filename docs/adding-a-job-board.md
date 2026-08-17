@@ -102,11 +102,40 @@ The key must also be *stable* across query noise — tracking parameters change
 between renders of the same posting, and keying on the full URL causes constant
 re-renders.
 
-### 5. Over-broad host permissions
+### 5. Scoping match patterns too tightly *or* too loosely
 
-`https://www.indeed.com/viewjob*`, not `https://www.indeed.com/*`. Chrome Web
-Store review weighs permission breadth, and a content script running on a user's
-entire session on a site is a much bigger ask than one running on job pages.
+Scope to the site's **job section**, not to the whole domain and not to
+enumerated sub-paths:
+
+```jsonc
+// Too broad — runs on the feed, messages, and profiles
+"matches": ["https://www.linkedin.com/*"]
+
+// Too narrow — this was a real bug
+"matches": [
+  "https://www.linkedin.com/jobs/view/*",
+  "https://www.linkedin.com/jobs/search/*",
+  "https://www.linkedin.com/jobs/collections/*"
+]
+
+// Right
+"matches": ["https://www.linkedin.com/jobs/*"]
+```
+
+The middle version shipped first and looked careful. LinkedIn also serves the
+identical two-pane posting UI from `/jobs/search-results/`, so on that path the
+content script never injected and the panel simply never appeared — with no
+error in the console, because nothing had run. Enumerating sub-paths buys no
+real privacy over scoping to the section, and it breaks silently every time the
+site adds a route.
+
+Keep the adapter's own path regex equally broad (`/^\/jobs(\/|$)/`) and let
+`extract` return `null` on job-section pages that have no posting on them.
+
+**Add the URL to [`tests/manifest.test.ts`](../extension/tests/manifest.test.ts).**
+That suite asserts the manifest injects on every URL the adapter claims — the
+gap between those two files is invisible to unit tests of either one, which is
+exactly how the bug above survived a green suite.
 
 ## Testing
 

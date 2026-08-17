@@ -18,7 +18,18 @@ import type { PageContext } from '../types/domain';
 import { inferCountry } from '../lib/country';
 import { safeBlockText, safeQuery, safeText, type JobBoardAdapter } from './types';
 
-const JOB_PATHS = [/^\/jobs\/view\//, /^\/jobs\/search\//, /^\/jobs\/collections\//];
+/**
+ * Any path under /jobs/ is a candidate.
+ *
+ * Enumerating sub-paths (`/jobs/view/`, `/jobs/search/`, …) looks tighter but is
+ * wrong: LinkedIn serves the same two-pane posting UI from several paths and
+ * adds new ones. `/jobs/search-results/` renders an identical pane to
+ * `/jobs/search/` and was missed entirely by the enumerated list. Matching the
+ * section and letting `extract` decide whether a posting is actually present is
+ * more robust and no broader in reach — the manifest still scopes the content
+ * script to the jobs section.
+ */
+const JOB_PATHS = [/^\/jobs(\/|$)/];
 const COMPANY_PATH = /^\/company\/([^/]+)/;
 
 const SELECTORS = {
@@ -102,6 +113,31 @@ export const linkedInAdapter: JobBoardAdapter = {
     return safeQuery(doc, [...selectors]) ?? null;
   },
 };
+
+/**
+ * Reports which selector groups currently match, for the console.
+ *
+ * Called only after extraction has failed repeatedly. Selector rot is the
+ * expected failure mode of this file, and the difference between "the content
+ * script never ran" and "it ran but every selector missed" is otherwise
+ * invisible — both look like a page with no panel.
+ */
+export function diagnose(doc: Document): Record<string, string> {
+  const report: Record<string, string> = {};
+
+  for (const [field, selectors] of Object.entries(SELECTORS)) {
+    const hit = [...selectors].find((selector) => {
+      try {
+        return doc.querySelector(selector) !== null;
+      } catch {
+        return false;
+      }
+    });
+    report[field] = hit ? `matched: ${hit}` : `NO MATCH (tried ${selectors.length})`;
+  }
+
+  return report;
+}
 
 function extractJobPosting(url: URL, doc: Document): PageContext | null {
   const companyName = safeText(doc, [...SELECTORS.companyName]);
