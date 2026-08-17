@@ -172,6 +172,38 @@ describe('extract — structural fallback when every class name has changed', ()
     expect(linkedInAdapter.findPanelAnchor('job_posting', docFrom(RESTYLED))).not.toBeNull();
   });
 
+  it('mounts even when the pane contains no heading at all', () => {
+    // Observed on a live page: the details pane had no h1, so seeding the
+    // anchor from a heading produced "read the posting, nowhere to put it".
+    const headless = docFrom(`
+      <main>
+        <div class="wrapper">
+          <span><a href="/company/axon/">Axon</a></span>
+          <p>${'Long description text. '.repeat(40)}</p>
+        </div>
+      </main>
+    `);
+    const context = linkedInAdapter.extract(url, headless);
+    expect(context!.company.name).toBe('Axon');
+    expect(linkedInAdapter.findPanelAnchor('job_posting', headless)).not.toBeNull();
+  });
+
+  it('does not climb all the way to the page layout when mounting', () => {
+    // Walking up to the outermost element inside the root put the panel at the
+    // bottom of the page whenever the root fell back to <main>.
+    const deep = docFrom(`
+      <main>
+        <div class="layout">
+          <div class="left-rail"></div>
+          <div class="pane"><div class="card"><span><a href="/company/axon/">Axon</a></span></div></div>
+        </div>
+      </main>
+    `);
+    const anchor = linkedInAdapter.findPanelAnchor('job_posting', deep);
+    expect(anchor).not.toBeNull();
+    expect(anchor!.className).not.toBe('layout');
+  });
+
   it('ignores /company/ links in the left rail results list', () => {
     // The results list is full of other companies. Picking the first match in
     // the document would attribute the wrong employer to the open posting.

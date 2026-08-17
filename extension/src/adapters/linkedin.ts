@@ -139,13 +139,26 @@ export const linkedInAdapter: JobBoardAdapter = {
 };
 
 /**
- * Anchor derived from a field we already located, for when no named container
- * matches.
+ * How far to climb from the seed element to reach a block-level container.
  *
- * Walks up from the heading to the outermost element that is still inside the
- * details pane, which is the top card in every layout LinkedIn has shipped.
- * Without this the panel had data and nowhere to put it — and the old code
- * responded by retrying forever, silently.
+ * Enough to escape the inline wrappers LinkedIn nests around text (a link
+ * inside a span inside a div), not enough to reach the page layout. Climbing to
+ * the outermost element inside the root — the previous behaviour — is wrong
+ * when the root has fallen back to `<main>`, because that lands on the whole
+ * two-pane layout and puts the panel at the bottom of the page.
+ */
+const ANCHOR_CLIMB_LIMIT = 3;
+
+/**
+ * Anchor derived from whatever we managed to locate, for when no named
+ * container matches.
+ *
+ * The seed order matters. A heading is the nicest anchor, but on a live page
+ * there was no `h1` inside the details pane at all — and seeding only from a
+ * heading meant extraction could succeed while mounting failed, which is the
+ * most frustrating possible state: we had the company name and nowhere to put
+ * the panel. The company link is the reliable seed, because extraction already
+ * depends on it existing.
  */
 function structuralAnchor(
   pageType: PageContext['pageType'],
@@ -155,14 +168,27 @@ function structuralAnchor(
   const seed =
     pageType === 'company'
       ? safeQuery(doc, [...SELECTORS.orgName]) ?? safeQuery(doc, ['h1'])
-      : safeQuery(root, [...SELECTORS.jobTitle]) ?? safeQuery(root, ['h1']);
+      : safeQuery(root, [...SELECTORS.jobTitle]) ??
+        safeQuery(root, ['h1']) ??
+        structuralCompanyLink(doc);
 
-  if (!seed) return null;
-  if (root === (doc as ParentNode)) return seed.parentElement ?? seed;
+  // Last resort: the top of the details pane. A panel in a slightly odd place
+  // beats no panel, and this is always available once the root itself resolves.
+  //
+  // Compared against the document rather than using `instanceof Element`:
+  // `Element` is a global in a content script but not in the test environment,
+  // and `detailsRoot` only ever returns an element or the document itself.
+  if (!seed) {
+    if (root === (doc as ParentNode)) return null;
+    const element = root as Element;
+    return element.firstElementChild ?? element;
+  }
 
   let node: Element = seed;
-  while (node.parentElement && node.parentElement !== root && node.parentElement !== doc.body) {
-    node = node.parentElement;
+  for (let level = 0; level < ANCHOR_CLIMB_LIMIT; level++) {
+    const parent = node.parentElement;
+    if (!parent || parent === root || parent === doc.body || parent === doc.documentElement) break;
+    node = parent;
   }
   return node;
 }
@@ -189,6 +215,25 @@ export function diagnose(doc: Document): Record<string, string> {
     report[field] = hit ? `matched: ${hit}` : `NO MATCH (tried ${selectors.length})`;
   }
 
+  // The named selectors are only half the story. Reporting the structural path
+  // separately is what distinguishes "we cannot read this page" from "we read
+  // it fine and could not mount" — a distinction the first round of this
+  // diagnostic did not make, which cost a debugging cycle.
+  const company = structuralCompany(doc);
+  report['(structural) company'] = company
+    ? `matched: ${company.name}${company.slug ? ` [${company.slug}]` : ''}`
+    : 'NO MATCH — no a[href*="/company/"] in the details pane';
+
+  const description = structuralDescription(doc);
+  report['(structural) description'] = description
+    ? `matched: ${description.length} chars`
+    : 'NO MATCH — no text block over the length floor';
+
+  const anchor = structuralAnchor('job_posting', doc);
+  report['(structural) anchor'] = anchor
+    ? `matched: <${anchor.tagName.toLowerCase()} class="${anchor.getAttribute('class') ?? ''}">`
+    : 'NO MATCH — nothing to mount onto';
+
   return report;
 }
 
@@ -212,7 +257,7 @@ function detailsRoot(doc: Document): ParentNode {
  * the element is for, not what it looks like this quarter, and it survives
  * restyling.
  */
-function structuralCompany(doc: Document): { name: string; slug?: string } | undefined {
+function structuralCompanyLink(doc: Document): Element | undefined {
   const root = detailsRoot(doc);
 
   let links: Element[] = [];
@@ -227,18 +272,27 @@ function structuralCompany(doc: Document): { name: string; slug?: string } | und
     // Skip "See all jobs", logo links, and other chrome that points at the
     // company but carries no name.
     if (!text || text.length > 120) continue;
-
-    const href = link.getAttribute('href') ?? '';
-    let slug: string | undefined;
-    try {
-      slug = COMPANY_PATH.exec(new URL(href, 'https://www.linkedin.com').pathname)?.[1];
-    } catch {
-      slug = undefined;
-    }
-    return { name: text, slug };
+    return link;
   }
 
   return undefined;
+}
+
+function structuralCompany(doc: Document): { name: string; slug?: string } | undefined {
+  const link = structuralCompanyLink(doc);
+  if (!link) return undefined;
+
+  const name = (link.textContent ?? '').replace(/\s+/g, ' ').trim();
+  const href = link.getAttribute('href') ?? '';
+
+  let slug: string | undefined;
+  try {
+    slug = COMPANY_PATH.exec(new URL(href, 'https://www.linkedin.com').pathname)?.[1];
+  } catch {
+    slug = undefined;
+  }
+
+  return { name, slug };
 }
 
 /** Longest text block in the details pane, used when no description selector hits. */
