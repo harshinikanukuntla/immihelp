@@ -25,15 +25,15 @@ class SourceAttribution(BaseModel):
     id: str
     label: str
     publisher: str
-    published_date: date = Field(serialization_alias="publishedDate")
+    published_date: date = Field(alias="publishedDate")
     url: str
 
     model_config = {"populate_by_name": True}
 
 
 class CompanyMatch(BaseModel):
-    canonical_name: str = Field(serialization_alias="canonicalName")
-    queried_name: str = Field(serialization_alias="queriedName")
+    canonical_name: str = Field(alias="canonicalName")
+    queried_name: str = Field(alias="queriedName")
     score: float = Field(ge=0.0, le=1.0)
     confidence: Literal["high", "probable", "possible"]
     #: How the match was made — "exact_normalized", "domain", "alias", "fuzzy".
@@ -67,8 +67,8 @@ class NoRecordResponse(BaseModel):
     """
 
     kind: Literal["no_record"] = "no_record"
-    queried_name: str = Field(serialization_alias="queriedName")
-    countries_checked: list[str] = Field(serialization_alias="countriesChecked")
+    queried_name: str = Field(alias="queriedName")
+    countries_checked: list[str] = Field(alias="countriesChecked")
 
     model_config = {"populate_by_name": True}
 
@@ -97,10 +97,10 @@ class HealthResponse(BaseModel):
     cache: bool
     #: False when rate limiting fell back to in-process counters because Redis was
     #: unreachable at startup, making limits per-worker rather than shared.
-    shared_rate_limits: bool = Field(True, serialization_alias="sharedRateLimits")
+    shared_rate_limits: bool = Field(True, alias="sharedRateLimits")
     #: Most recent successful ETL run per source, so staleness is externally visible.
     last_ingest: dict[str, date | None] = Field(
-        default_factory=dict, serialization_alias="lastIngest"
+        default_factory=dict, alias="lastIngest"
     )
 
     model_config = {"populate_by_name": True}

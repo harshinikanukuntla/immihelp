@@ -11,6 +11,7 @@ from __future__ import annotations
 from datetime import date
 
 from fastapi import APIRouter, Depends, Query, Request
+from fastapi.responses import JSONResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -27,7 +28,13 @@ router = APIRouter(prefix="/v1", tags=["v1"])
 settings = get_settings()
 
 
-@router.get("/company", response_model=CompanyLookupResponse, response_model_by_alias=True)
+@router.get(
+    "/company",
+    # Documents the response in OpenAPI. Returning a Response below means FastAPI
+    # does not additionally re-validate the payload — see the note in the body.
+    response_model=CompanyLookupResponse,
+    response_model_by_alias=True,
+)
 @limiter.limit(settings.rate_limit)
 def get_company(
     request: Request,
@@ -45,19 +52,25 @@ def get_company(
         None, max_length=255, description="Company web domain, when the page exposes one."
     ),
     session: Session = Depends(get_session),
-) -> CompanyLookupResponse:
+) -> JSONResponse:
     """Looks up a company's sponsorship history.
 
     Returns one of three verdicts — see `app.schemas`. Note that `no_record` and
     `does_not_sponsor` are different answers and the client renders them
     differently; an absent filing is not a negative finding.
+
+    Returns a `JSONResponse` rather than a model so the already-serialised
+    payload is sent as-is. Returning the camelCase dict from a `response_model`
+    endpoint makes FastAPI validate it *back* into the model, which fails on
+    every aliased field and 500s the whole endpoint. Cached and fresh responses
+    now take one identical path out.
     """
     normalized_country = country.upper() if country else None
 
     key = cache.cache_key(name, normalized_country, domain)
     cached = cache.get(key)
     if cached is not None:
-        return cached
+        return JSONResponse(cached)
 
     result = lookup_company(session, name=name, country=normalized_country, domain=domain)
     payload = result.model_dump(by_alias=True, mode="json")
@@ -67,7 +80,7 @@ def get_company(
     # influence what the user gets back.
     record_lookup(session, name)
 
-    return payload
+    return JSONResponse(payload)
 
 
 @router.get("/sources")

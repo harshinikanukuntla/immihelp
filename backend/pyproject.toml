@@ -54,4 +54,11 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-filterwarnings = ["error::DeprecationWarning"]
+filterwarnings = [
+    # Our own deprecation warnings are errors; we should not be ignoring them.
+    "error::DeprecationWarning",
+    # Dependencies' internals are not ours to fix, and letting them fail
+    # collection means a Python upgrade can silently disable the whole suite.
+    # slowapi calls asyncio.iscoroutinefunction at import time on Python 3.14.
+    "ignore:'asyncio.iscoroutinefunction' is deprecated:DeprecationWarning",
+]
