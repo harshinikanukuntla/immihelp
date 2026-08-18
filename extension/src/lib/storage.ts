@@ -205,6 +205,42 @@ export async function saveResumeVector(vector: number[], model: string): Promise
   });
 }
 
+// --- Per-job analysis cache -------------------------------------------------
+
+/**
+ * Caches a resume analysis per job posting.
+ *
+ * This exists to make the score *stable*. Without it the analysis recomputed on
+ * every render, and because the extracted job-description text varies slightly
+ * while a single-page app hydrates, the number visibly changed between
+ * refreshes. A fit score that moves when you reload is worse than no score: it
+ * teaches the user that nothing in the panel can be trusted, including the
+ * sponsorship data, which is the part that actually matters.
+ *
+ * Keyed by job *and* by the resume's `updatedAt`, so editing the resume
+ * naturally invalidates every cached analysis without needing a sweep.
+ */
+function matchKey(jobKey: string, resumeUpdatedAt: number): string {
+  return `${RESUME_NAMESPACE}:match:${jobKey}:${resumeUpdatedAt}`;
+}
+
+export async function getCachedAnalysis<T>(
+  jobKey: string,
+  resumeUpdatedAt: number,
+): Promise<T | null> {
+  const key = matchKey(jobKey, resumeUpdatedAt);
+  const stored = await chrome.storage.local.get(key);
+  return (stored[key] as T | undefined) ?? null;
+}
+
+export async function setCachedAnalysis<T>(
+  jobKey: string,
+  resumeUpdatedAt: number,
+  analysis: T,
+): Promise<void> {
+  await chrome.storage.local.set({ [matchKey(jobKey, resumeUpdatedAt)]: analysis });
+}
+
 /**
  * Deletes the resume and everything derived from it.
  *

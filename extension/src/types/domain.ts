@@ -85,6 +85,38 @@ export interface PostingSignal {
   cues: string[];
 }
 
+/**
+ * Result of a resume comparison. Both scores are computed on-device.
+ *
+ * Two numbers because they measure different things and their disagreement is
+ * informative. `ats` is deterministic keyword coverage — what screening software
+ * checks. `semantic` is meaning-level similarity — it can see that "built
+ * distributed systems" answers "scalable backend architecture", which keyword
+ * matching cannot.
+ */
+export interface ResumeAnalysis {
+  ats: AtsResult;
+  semantic: ResumeMatch | null;
+}
+
+export interface AtsResult {
+  score: number;
+  band: 'strong' | 'moderate' | 'weak';
+  matched: string[];
+  missing: Array<{ term: string; weight: number; occurrences: number; inRequirements: boolean }>;
+  suggestions: Array<{
+    term: string;
+    projectedScore: number;
+    gain: number;
+    inRequirements: boolean;
+  }>;
+  totalTerms: number;
+  matchedTerms: number;
+  /** Score if every suggestion were addressed. Not the sum of the gains. */
+  projectedAll: number;
+  summary: string;
+}
+
 /** On-device resume-to-JD similarity (Feature 2). Never leaves the machine. */
 export interface ResumeMatch {
   /** 0..100, derived from cosine similarity — see lib/resume-match.ts for the mapping. */

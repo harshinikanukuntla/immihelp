@@ -8,7 +8,7 @@
  * logic, and the embedding model, and it means a job board's CSP can never block
  * our network access.
  */
-import type { PageContext, ResumeMatch, SponsorshipVerdict } from '../types/domain';
+import type { PageContext, ResumeAnalysis, SponsorshipVerdict } from '../types/domain';
 
 export type Request =
   | { type: 'lookup_company'; name: string; country?: string; domain?: string }
@@ -23,7 +23,14 @@ export type Request =
 
 export type Response =
   | { ok: true; type: 'lookup_company'; verdict: SponsorshipVerdict; cached: boolean }
-  | { ok: true; type: 'match_resume'; match: ResumeMatch | null; reason?: string }
+  | {
+      ok: true;
+      type: 'match_resume';
+      analysis: ResumeAnalysis | null;
+      reason?: string;
+      /** True when served from the per-job cache, so the score cannot drift. */
+      cached?: boolean;
+    }
   | { ok: true; type: 'get_resume_status'; hasResume: boolean; updatedAt: number | null; chars: number }
   | { ok: true; type: 'save_resume' }
   | { ok: true; type: 'delete_resume' }

@@ -23,7 +23,7 @@
 import type {
   PageContext,
   PostingSignal,
-  ResumeMatch,
+  ResumeAnalysis,
   SponsorshipRecord,
   SponsorshipVerdict,
 } from '../types/domain';
@@ -92,13 +92,13 @@ export class Panel {
     context: PageContext,
     verdict: SponsorshipVerdict,
     signal: PostingSignal | null,
-    match: ResumeMatch | null,
+    analysis: ResumeAnalysis | null,
     matchReason: string | undefined,
     showDeepLinks: boolean,
   ): void {
     const sections: Node[] = [this.header(context)];
 
-    sections.push(this.sponsorshipSection(context, verdict));
+    sections.push(this.sponsorshipSection(context, verdict, signal));
 
     // Posting-text detection is a fallback for countries no register covers. It
     // is also shown alongside a verified result when the posting says something
@@ -109,7 +109,7 @@ export class Panel {
     }
 
     if (context.pageType === 'job_posting') {
-      sections.push(this.resumeSection(match, matchReason));
+      sections.push(this.resumeSection(analysis, matchReason));
     }
 
     if (showDeepLinks) sections.push(this.linksSection(context));
@@ -141,13 +141,17 @@ export class Panel {
 
   // --- Sponsorship ----------------------------------------------------------
 
-  private sponsorshipSection(context: PageContext, verdict: SponsorshipVerdict): HTMLElement {
+  private sponsorshipSection(
+    context: PageContext,
+    verdict: SponsorshipVerdict,
+    signal: PostingSignal | null,
+  ): HTMLElement {
     const section = el('div', { class: 'ss-section' });
     section.append(el('p', { class: 'ss-section-title' }, 'Sponsorship history'));
 
     switch (verdict.kind) {
       case 'verified':
-        return this.renderVerified(section, context, verdict);
+        return this.renderVerified(section, context, verdict, signal);
       case 'no_record':
         return this.renderNoRecord(section, verdict);
       case 'does_not_sponsor':
@@ -165,18 +169,52 @@ export class Panel {
     section: HTMLElement,
     context: PageContext,
     verdict: Extract<SponsorshipVerdict, { kind: 'verified' }>,
+    signal: PostingSignal | null,
   ): HTMLElement {
     const { match, records } = verdict;
     const isCertain = match.confidence === 'high' || match.confidence === 'probable';
 
+    /**
+     * The most important case in the whole panel: the company has filed before,
+     * and *this posting* says it will not sponsor.
+     *
+     * History and this posting answer different questions. "Have they ever
+     * sponsored?" is about the company. "Will they sponsor for this role?" is
+     * about the job, and it is the one the reader is actually deciding on. When
+     * the two disagree, the posting is more specific and more recent, so it
+     * leads — and the filing history stays visible underneath as context rather
+     * than being suppressed.
+     */
+    if (signal?.polarity === 'negative') {
+      section.append(
+        badge('negative', 'cross', 'This posting rules out sponsorship'),
+        el(
+          'p',
+          { class: 'ss-body', style: 'margin-top: var(--ss-space-sm)' },
+          'The posting states that sponsorship is not available for this role. That is ' +
+            'more specific and more recent than the filing history below, so treat it ' +
+            'as the answer for this job.',
+        ),
+        el(
+          'p',
+          { class: 'ss-meta' },
+          `${match.canonicalName} has sponsored in the past — ${describeHistory(records)} — ` +
+            'which may still make them worth approaching about other roles.',
+        ),
+      );
+    }
+
+
     // A possible-only match is never dressed as a verified fact, even though the
     // underlying figures are genuinely government-sourced. The uncertainty is
     // about *which company they describe*, which is the part that matters.
-    section.append(
-      isCertain
-        ? badge('verified', 'check', 'Found in government records')
-        : badge('unverified', 'info', 'Possible match — verify independently'),
-    );
+    if (signal?.polarity !== 'negative') {
+      section.append(
+        isCertain
+          ? badge('verified', 'check', 'Found in government records')
+          : badge('unverified', 'info', 'Possible match — verify independently'),
+      );
+    }
 
     if (match.canonicalName.toLowerCase() !== match.queriedName.toLowerCase()) {
       section.append(
@@ -352,11 +390,14 @@ export class Panel {
 
   // --- Feature 2 ------------------------------------------------------------
 
-  private resumeSection(match: ResumeMatch | null, reason: string | undefined): HTMLElement {
+  private resumeSection(
+    analysis: ResumeAnalysis | null,
+    reason: string | undefined,
+  ): HTMLElement {
     const section = el('div', { class: 'ss-section' });
-    section.append(el('p', { class: 'ss-section-title' }, 'Resume fit'));
+    section.append(el('p', { class: 'ss-section-title' }, 'Resume match'));
 
-    if (!match) {
+    if (!analysis) {
       section.append(el('p', { class: 'ss-body' }, resumeEmptyCopy(reason)));
       if (reason === 'no_resume') {
         const button = el('button', { class: 'ss-link', type: 'button' }, 'Add your resume');
@@ -368,35 +409,93 @@ export class Panel {
       return section;
     }
 
+    const { ats, semantic } = analysis;
+
     const row = el('div', { class: 'ss-score-row' });
     row.append(
-      el('span', { class: 'ss-score' }, String(match.score)),
-      el('span', { class: 'ss-score-suffix' }, `/ 100 · ${match.band} overlap`),
+      el('span', { class: 'ss-score' }, `${ats.score}%`),
+      el(
+        'span',
+        { class: 'ss-score-suffix' },
+        `keyword match · ${ats.matchedTerms} of ${ats.totalTerms} terms`,
+      ),
     );
     section.append(row);
 
     const meter = el('div', { class: 'ss-meter' });
     meter.setAttribute('role', 'meter');
-    meter.setAttribute('aria-valuenow', String(match.score));
+    meter.setAttribute('aria-valuenow', String(ats.score));
     meter.setAttribute('aria-valuemin', '0');
     meter.setAttribute('aria-valuemax', '100');
-    meter.setAttribute('aria-label', 'Resume similarity to this job description');
-    meter.append(el('div', { class: 'ss-meter-fill', style: `width: ${match.score}%` }));
+    meter.setAttribute('aria-label', 'Keyword match against this job description');
+    meter.append(el('div', { class: 'ss-meter-fill', style: `width: ${ats.score}%` }));
     section.append(meter);
 
-    section.append(el('p', { class: 'ss-body' }, match.rationale));
+    section.append(el('p', { class: 'ss-body' }, ats.summary));
 
-    if (match.gaps.length > 0) {
-      const list = el('ul', { class: 'ss-gaps' });
-      list.setAttribute('aria-label', 'Terms emphasised in the posting but absent from your resume');
-      for (const gap of match.gaps) {
-        list.append(el('li', { class: 'ss-gap' }, gap));
+    // The headline of this section: concrete, ranked, with the exact resulting
+    // score. Each projection is arithmetic over the scoring function, not a guess.
+    if (ats.suggestions.length > 0) {
+      section.append(
+        el(
+          'p',
+          { class: 'ss-section-title', style: 'margin-top: var(--ss-space-md)' },
+          `Top ${ats.suggestions.length} additions`,
+        ),
+      );
+
+      const list = el('ol', { class: 'ss-suggestions' });
+      for (const suggestion of ats.suggestions) {
+        const item = el('li', { class: 'ss-suggestion' });
+        item.append(
+          el('span', { class: 'ss-suggestion-term' }, suggestion.term),
+          el(
+            'span',
+            { class: 'ss-suggestion-gain' },
+            `${ats.score}% → ${suggestion.projectedScore}%`,
+          ),
+        );
+        if (suggestion.inRequirements) {
+          item.append(el('span', { class: 'ss-suggestion-tag' }, 'in requirements'));
+        }
+        list.append(item);
       }
       section.append(list);
+
+      if (ats.projectedAll > ats.score) {
+        section.append(
+          el(
+            'p',
+            { class: 'ss-meta' },
+            `Covering all ${ats.suggestions.length} would put you at about ${ats.projectedAll}%. ` +
+              'Only add what is genuinely true of your experience.',
+          ),
+        );
+      }
+    }
+
+    // Shown second and smaller: it measures something real that keyword matching
+    // cannot see, but it is a fuzzy number and should not compete with the
+    // explainable one for attention.
+    if (semantic) {
+      section.append(
+        el(
+          'p',
+          { class: 'ss-meta' },
+          `Semantic similarity: ${semantic.score}/100 (${semantic.band}). ` +
+            'This reads meaning rather than exact words, so it can credit experience ' +
+            'you described differently.',
+        ),
+      );
     }
 
     section.append(
-      el('p', { class: 'ss-meta' }, 'Computed on your device. Your resume is never uploaded.'),
+      el(
+        'p',
+        { class: 'ss-meta' },
+        'Computed on your device; your resume is never uploaded. This models common ' +
+          'keyword screening, not any specific employer’s system.',
+      ),
     );
     return section;
   }
@@ -541,6 +640,31 @@ function formatDate(iso: string): string {
   const parsed = new Date(iso);
   if (Number.isNaN(parsed.getTime())) return iso;
   return parsed.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+/**
+ * One clause summarising a filing history, for the conflict case.
+ *
+ * Answers "when did they last file, and roughly how much?" — the two things
+ * that decide whether a past sponsor is still worth approaching.
+ */
+export function describeHistory(records: SponsorshipRecord[]): string {
+  const years = records.flatMap((record) => record.years);
+  const latest = years.length > 0 ? Math.max(...years) : null;
+
+  const total = records.reduce((sum, record) => {
+    for (const [metric, value] of Object.entries(record.metrics)) {
+      // Approvals only: denials and status flags are not volume.
+      if (metric.includes('approval') || metric.includes('certified') || metric.includes('positions')) {
+        sum += value;
+      }
+    }
+    return sum;
+  }, 0);
+
+  if (latest === null) return 'they hold a current sponsor licence';
+  if (total <= 0) return `they last appear in the data for ${latest}`;
+  return `about ${Math.round(total).toLocaleString()} approvals, most recently in ${latest}`;
 }
 
 /** "2021–2024" for a contiguous run, "2019, 2021" otherwise, "" when unknown. */

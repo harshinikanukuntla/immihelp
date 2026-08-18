@@ -357,3 +357,38 @@
   white-space: nowrap;
   border: 0;
 }
+
+/* --- ATS suggestions -------------------------------------------------------- */
+
+.ss-suggestions {
+  margin: var(--ss-space-sm) 0 0;
+  padding: 0 0 0 var(--ss-space-lg);
+  list-style: decimal;
+}
+
+.ss-suggestion {
+  padding: var(--ss-space-xs) 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--ss-space-sm);
+}
+
+.ss-suggestion-term {
+  font-weight: var(--ss-font-weight-medium);
+  color: var(--ss-color-text-strong);
+}
+
+.ss-suggestion-gain {
+  font-size: var(--ss-font-size-sm);
+  color: var(--ss-color-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.ss-suggestion-tag {
+  font-size: var(--ss-font-size-xs);
+  padding: 1px var(--ss-space-sm);
+  border-radius: var(--ss-radius-pill);
+  background: var(--ss-status-unverified-bg);
+  color: var(--ss-status-unverified-fg);
+}

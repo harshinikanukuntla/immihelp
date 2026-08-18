@@ -68,6 +68,55 @@ describe('refusal language reads negative', () => {
   }
 });
 
+/**
+ * Citizenship requirements never use the word "sponsorship", so no amount of
+ * sponsorship vocabulary catches them — yet for a visa-constrained reader they
+ * are just as disqualifying, and unlike sponsorship they cannot be negotiated.
+ */
+describe('citizenship and clearance requirements read negative', () => {
+  const negatives = [
+    'Must be a US citizen.',
+    'US citizens only.',
+    'This role requires US citizenship.',
+    'Applicants must be U.S. citizens or green card holders.',
+    'Open to citizens and permanent residents only.',
+    'An active security clearance is required.',
+    'Must be able to obtain a security clearance.',
+    'Due to ITAR requirements, applicants must be US persons.',
+    'We cannot sponsor H-1B visas for this role.',
+    'No H-1B or OPT candidates at this time.',
+    'We are not able to sponsor H1B transfers.',
+  ];
+
+  for (const text of negatives) {
+    it(`negative: ${text}`, () => {
+      expect(polarityOf(text)).toBe('negative');
+    });
+  }
+});
+
+describe('postings that welcome a named visa status read positive', () => {
+  const positives = [
+    'H-1B transfers welcome.',
+    'OPT and STEM OPT candidates are encouraged to apply.',
+    'We consider E-3 and TN candidates.',
+  ];
+
+  for (const text of positives) {
+    it(`positive: ${text}`, () => {
+      expect(polarityOf(text)).toBe('positive');
+    });
+  }
+
+  it('does not flag a citizenship mention that is explicitly not required', () => {
+    expect(polarityOf('US citizenship is not required for this role.')).toBe('positive');
+  });
+
+  it('does not mistake a green card offer for a green card requirement', () => {
+    expect(polarityOf('We sponsor green cards after one year.')).toBe('positive');
+  });
+});
+
 describe('postings that say nothing about work authorisation', () => {
   const silent = [
     'We are looking for a senior backend engineer with five years of Go experience.',

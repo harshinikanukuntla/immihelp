@@ -40,7 +40,7 @@ import { guard, type JobBoardAdapter } from '../adapters/types';
 import { Panel, PANEL_HOST_ID } from './panel';
 import { detectSponsorshipSignal } from '../lib/sponsorship-phrases';
 import { DEFAULT_SETTINGS, send, type Settings } from '../lib/messages';
-import type { PageContext, PostingSignal, ResumeMatch } from '../types/domain';
+import type { PageContext, PostingSignal, ResumeAnalysis } from '../types/domain';
 
 const DEBOUNCE_MS = 400;
 /** Extraction is retried while the SPA hydrates, then given up on. */
@@ -200,7 +200,7 @@ async function hydrate(view: Panel, context: PageContext, localGeneration: numbe
     context,
     verdict,
     signal,
-    resume.match,
+    resume.analysis,
     resume.reason,
     settings?.deepLinksEnabled ?? true,
   );
@@ -235,9 +235,9 @@ async function lookupSponsorship(context: PageContext) {
 
 async function matchResume(
   context: PageContext,
-): Promise<{ match: ResumeMatch | null; reason?: string }> {
+): Promise<{ analysis: ResumeAnalysis | null; reason?: string }> {
   if (context.pageType !== 'job_posting' || !context.jobDescription) {
-    return { match: null, reason: 'no_description' };
+    return { analysis: null, reason: 'no_description' };
   }
 
   const response = await send({
@@ -246,8 +246,8 @@ async function matchResume(
     jobKey: context.key,
   });
 
-  if (!response.ok) return { match: null, reason: 'embedding_failed' };
-  return { match: response.match, reason: response.reason };
+  if (!response.ok) return { analysis: null, reason: 'embedding_failed' };
+  return { analysis: response.analysis, reason: response.reason };
 }
 
 // --- Mounting ---------------------------------------------------------------

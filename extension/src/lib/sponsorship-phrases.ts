@@ -83,6 +83,24 @@ const ANCHORS: Anchor[] = [
   { id: 'work-permit', tokens: ['work', 'permit'], kind: 'requirement', weight: 2 },
   { id: 'existing-visa', tokens: ['existing', 'visa'], kind: 'requirement', weight: 2 },
   { id: 'valid-visa', tokens: ['valid', 'visa'], kind: 'requirement', weight: 2 },
+
+  // --- Citizenship and status requirements (base negative) --------------------
+  //
+  // A whole category the first version missed. "We need only US citizens" never
+  // says the word "sponsorship", so no amount of sponsorship vocabulary catches
+  // it — but for a visa-constrained reader it is exactly as disqualifying as
+  // "we do not sponsor", and arguably more so, since a citizenship requirement
+  // cannot be negotiated at any salary.
+  //
+  // Weight 3, matching sponsorship-explicit language: this is a hard bar, not a
+  // soft signal like relocation.
+  { id: 'us-citizen', tokens: ['us', 'citizen'], kind: 'requirement', weight: 3 },
+  { id: 'us-citizens', tokens: ['us', 'citizens'], kind: 'requirement', weight: 3 },
+  { id: 'citizenship', tokens: ['citizenship'], kind: 'requirement', weight: 3 },
+  { id: 'green-card', tokens: ['green', 'card'], kind: 'requirement', weight: 3 },
+  { id: 'permanent-resident', tokens: ['permanent', 'resident'], kind: 'requirement', weight: 3 },
+  { id: 'security-clearance', tokens: ['security', 'clearance'], kind: 'requirement', weight: 3 },
+  { id: 'itar', tokens: ['itar'], kind: 'requirement', weight: 3 },
 ];
 
 /** Longest anchors first, so "work authorization" is never shadowed by a shorter overlap. */
@@ -166,6 +184,38 @@ const HARD_PATTERNS: Array<{ id: string; re: RegExp; polarity: 'positive' | 'neg
     id: 'hard:requiring-sponsorship-not-considered',
     re: /\b(?:requiring|require|requires|needing)\s+(?:visa\s+)?sponsorship\b[^.!?\n]{0,40}?\b(?:not|cannot|won't|will\s+not|unable)\b/i,
     polarity: 'negative',
+  },
+  {
+    // "must be a US citizen", "US citizens only", "requires US citizenship"
+    id: 'hard:citizenship-required',
+    re: /\b(?:must\s+be|require[sd]?|only|restricted\s+to)\b[^.!?\n]{0,30}?\b(?:u\.?s\.?|united\s+states|american)\s+citizens?(?:hip)?\b|\b(?:u\.?s\.?|united\s+states)\s+citizens?\s+only\b/i,
+    polarity: 'negative',
+  },
+  {
+    // "US citizens or green card holders", "citizens and permanent residents only"
+    id: 'hard:citizen-or-green-card-only',
+    re: /\bcitizens?\b[^.!?\n]{0,30}?\b(?:green\s+card|permanent\s+residents?|lawful\s+permanent)\b/i,
+    polarity: 'negative',
+  },
+  {
+    // Clearance and export-control roles are effectively citizenship-gated.
+    id: 'hard:clearance-required',
+    re: /\b(?:active\s+)?(?:security\s+clearance|ts\/sci|top\s+secret|itar|export\s+control)\b[^.!?\n]{0,30}?\b(?:required|require[sd]|must|eligible)\b|\bmust\s+(?:be\s+able\s+to\s+)?(?:obtain|hold)\s+(?:a\s+)?(?:security\s+)?clearance\b/i,
+    polarity: 'negative',
+  },
+  {
+    // "no H-1B", "cannot sponsor H-1B or OPT", "no C2C / no sponsorship"
+    id: 'hard:named-visa-refused',
+    re: /\b(?:no|not|cannot|can't|unable\s+to\s+sponsor|won't\s+sponsor)\b[^.!?\n]{0,30}?\b(?:h-?1-?b|h1|opt|cpt|ead|tn\s+visa|e-?3|o-?1|stem\s+opt)\b/i,
+    polarity: 'negative',
+  },
+  {
+    // The inverse, so a posting that welcomes a named status still reads
+    // positive. Both word orders occur: "H-1B transfers welcome" and "we
+    // consider H-1B candidates" are equally common phrasings.
+    id: 'hard:named-visa-welcomed',
+    re: /\b(?:h-?1-?b|opt|cpt|stem\s+opt|e-?3|tn|o-?1)\b[^.!?\n]{0,30}?\b(?:welcome|welcomed|accept(?:ed)?|eligible|encouraged|considered|transfers?)\b|\b(?:welcome|accept|consider|encourage)[a-z]*\b[^.!?\n]{0,30}?\b(?:h-?1-?b|opt|cpt|e-?3|tn|o-?1)\b/i,
+    polarity: 'positive',
   },
 
   // --- Positive ---------------------------------------------------------------

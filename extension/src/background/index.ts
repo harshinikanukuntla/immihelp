@@ -14,14 +14,18 @@ import {
 } from '../lib/resume-match';
 import type { OffscreenResponse, Request, Response, Settings } from '../lib/messages';
 import { mismatchReportUrl } from '../lib/deeplinks';
+import { analyzeAts, projectedScoreWithAll } from '../lib/ats';
+import type { AtsResult, ResumeAnalysis } from '../types/domain';
 import {
   deleteResume,
+  getCachedAnalysis,
   getCachedVerdict,
   getResume,
   getSettings,
   migrate,
   saveResume,
   saveResumeVector,
+  setCachedAnalysis,
   setCachedVerdict,
   setSettings,
 } from '../lib/storage';
@@ -56,7 +60,7 @@ async function handle(message: Request): Promise<Response> {
       return handleLookup(message.name, message.country, message.domain);
 
     case 'match_resume':
-      return handleResumeMatch(message.jobDescription);
+      return handleResumeMatch(message.jobDescription, message.jobKey);
 
     case 'get_resume_status': {
       const resume = await getResume();
@@ -122,20 +126,46 @@ async function handleLookup(
   return { ok: true, type: 'lookup_company', verdict, cached: false };
 }
 
-async function handleResumeMatch(jobDescription: string): Promise<Response> {
+async function handleResumeMatch(jobDescription: string, jobKey: string): Promise<Response> {
   const settings = await getSettings();
   if (!settings.resumeMatchEnabled) {
-    return { ok: true, type: 'match_resume', match: null, reason: 'disabled' };
+    return { ok: true, type: 'match_resume', analysis: null, reason: 'disabled' };
   }
 
   const resume = await getResume();
   if (!resume) {
-    return { ok: true, type: 'match_resume', match: null, reason: 'no_resume' };
+    return { ok: true, type: 'match_resume', analysis: null, reason: 'no_resume' };
   }
   if (!jobDescription || jobDescription.trim().length < 200) {
-    // Too little text to embed meaningfully; a score here would be noise.
-    return { ok: true, type: 'match_resume', match: null, reason: 'no_description' };
+    // Too little text to compare meaningfully; a score here would be noise.
+    return { ok: true, type: 'match_resume', analysis: null, reason: 'no_description' };
   }
+
+  // The cache is what makes the score stable across refreshes. Serve it before
+  // doing any work, so the number a user saw a minute ago is the number they see
+  // now — see the note in storage.ts.
+  const cached = await getCachedAnalysis<ResumeAnalysis>(jobKey, resume.updatedAt);
+  if (cached) {
+    return { ok: true, type: 'match_resume', analysis: cached, cached: true };
+  }
+
+  // Keyword analysis is pure arithmetic over two strings — no model, no
+  // async work, and it cannot fail. It is computed first and independently so
+  // the panel still shows a score even when the embedding model is unavailable.
+  const ats = analyzeAts(resume.text, jobDescription);
+  const atsResult: AtsResult = {
+    score: ats.score,
+    band: ats.band,
+    matched: ats.matched,
+    missing: ats.missing,
+    suggestions: ats.suggestions,
+    totalTerms: ats.totalTerms,
+    matchedTerms: ats.matchedTerms,
+    projectedAll: projectedScoreWithAll(ats),
+    summary: ats.summary,
+  };
+
+  const analysis: ResumeAnalysis = { ats: atsResult, semantic: null };
 
   try {
     // The resume is embedded once and cached. A model change invalidates it,
@@ -149,22 +179,18 @@ async function handleResumeMatch(jobDescription: string): Promise<Response> {
     const resumeVector = needsResumeVector ? vectors[0] : resume.vector;
     const jobVector = needsResumeVector ? vectors[1] : vectors[0];
 
-    if (!resumeVector || !jobVector) {
-      return { ok: true, type: 'match_resume', match: null, reason: 'embedding_failed' };
+    if (resumeVector && jobVector) {
+      if (needsResumeVector) await saveResumeVector(resumeVector, MODEL_ID);
+      analysis.semantic = buildMatch(resumeVector, jobVector, resume.text, jobDescription);
     }
-    if (needsResumeVector) {
-      await saveResumeVector(resumeVector, MODEL_ID);
-    }
-
-    return {
-      ok: true,
-      type: 'match_resume',
-      match: buildMatch(resumeVector, jobVector, resume.text, jobDescription),
-    };
   } catch (err) {
-    console.error('[SponsorScope] resume match failed', err);
-    return { ok: true, type: 'match_resume', match: null, reason: 'embedding_failed' };
+    // The keyword score stands on its own, so a model failure degrades the
+    // panel rather than emptying it.
+    console.warn('[SponsorScope] semantic match unavailable, keyword score only', err);
   }
+
+  await setCachedAnalysis(jobKey, resume.updatedAt, analysis);
+  return { ok: true, type: 'match_resume', analysis, cached: false };
 }
 
 // --- Offscreen document lifecycle -------------------------------------------
