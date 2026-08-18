@@ -28,6 +28,91 @@ const RESUME = [
   'Worked with Kafka for event streaming.',
 ].join('\n');
 
+/**
+ * Regression cases from a real posting.
+ *
+ * The tool shipped a "Top 5 additions" list reading: marketplace, re, ll,
+ * pricing, small. Two separate faults — `re` and `ll` are contraction fragments
+ * from "we're" and "you'll", and `small` was admitted purely for being frequent.
+ * Neither is something a person could add to a resume.
+ */
+describe('junk that must never be suggested', () => {
+  const REAL_POSTING = [
+    'About the job',
+    "We're a marketplace for small businesses, and you'll help us grow.",
+    "We're small, we move fast, and we're proud of it.",
+    'Small teams. Small batches. Small businesses.',
+    "You'll work on pricing. You'll own pricing. Pricing is core.",
+    '',
+    'Requirements:',
+    '- 5+ years of experience with Python and distributed systems',
+    '- Experience with marketplace pricing models',
+    '- Strong knowledge of SQL',
+  ].join('\n');
+
+  const terms = () => analyzeAts('Java developer', REAL_POSTING).missing.map((g) => g.term);
+
+  it('never suggests contraction fragments', () => {
+    expect(terms()).not.toContain('re');
+    expect(terms()).not.toContain('ll');
+    expect(terms()).not.toContain('ve');
+  });
+
+  it('never suggests an adjective, however often it is repeated', () => {
+    // "small" appears six times above and is still not a requirement.
+    expect(terms()).not.toContain('small');
+  });
+
+  it('does not admit a term for frequency alone', () => {
+    const noRequirements = 'Widget widget widget. Widget widget. We love widgets.';
+    expect(analyzeAts('nothing', noRequirements).missing.map((g) => g.term)).not.toContain('widget');
+  });
+
+  it('still finds the genuine skills in the same posting', () => {
+    const found = terms();
+    expect(found).toContain('python');
+    expect(found).toContain('sql');
+  });
+
+  it('keeps a domain term that appears in a requirements bullet', () => {
+    // "pricing" is a real requirement for this role — it is named in the
+    // requirements, not merely repeated in the prose.
+    expect(terms()).toContain('pricing');
+  });
+});
+
+describe('tokenizer handles contractions', () => {
+  it('does not shatter contractions into fragments', () => {
+    expect(tokenize("we're hiring")).toEqual(['we', 'hiring']);
+    expect(tokenize("you'll build")).toEqual(['you', 'build']);
+    expect(tokenize("don't need")).toEqual(['do', 'need']);
+  });
+
+  it('handles curly apostrophes', () => {
+    expect(tokenize('we’re hiring')).toEqual(['we', 'hiring']);
+  });
+});
+
+describe('evidence is required, and recorded', () => {
+  it('admits a known skill anywhere in the posting', () => {
+    const analysis = analyzeAts('nothing', 'We use Kubernetes heavily across the platform.');
+    const gap = analysis.missing.find((g) => g.term === 'kubernetes');
+    expect(gap?.evidence).toBe('lexicon');
+  });
+
+  it('admits an unknown term when a requirement frame introduces it', () => {
+    // The lexicon cannot know every field; the frame is what generalises.
+    const analysis = analyzeAts('nothing', 'Requirements:\n- Experience with hydroponic irrigation');
+    expect(analysis.missing.map((g) => g.term)).toContain('hydroponic irrigation');
+  });
+
+  it('weights a requirements-section skill above a body mention', () => {
+    const inReq = analyzeAts('x', 'Requirements:\n- Experience with Rust').missing[0]!;
+    const inBody = analyzeAts('x', 'Our stack happens to include Rust.').missing[0]!;
+    expect(inReq.weight).toBeGreaterThan(inBody.weight);
+  });
+});
+
 describe('determinism', () => {
   it('produces the same score for the same inputs, every time', () => {
     const runs = Array.from({ length: 20 }, () => analyzeAts(RESUME, JD).score);
@@ -77,7 +162,13 @@ describe('scoring', () => {
     const analysis = analyzeAts(RESUME, '');
     expect(analysis.score).toBe(0);
     expect(analysis.totalTerms).toBe(0);
-    expect(analysis.summary).toContain('not have enough detail');
+    expect(analysis.summary).toContain('does not name enough specific skills');
+  });
+
+  it('declines to score a posting that names too few skills', () => {
+    // Better to say so than to report a percentage derived from two terms.
+    const vague = 'We are looking for a motivated self-starter to join our team.';
+    expect(analyzeAts(RESUME, vague).summary).toContain('does not name enough specific skills');
   });
 
   it('weights requirements more heavily than boilerplate', () => {
@@ -147,16 +238,23 @@ describe('suggestions', () => {
     expect(first.gain).toBe(expected - analysis.score);
   });
 
-  it('does not overstate the ceiling by summing individual gains', () => {
-    // All suggestions share one denominator, so the combined score is not the
-    // score plus the sum of the gains.
+  it('computes the combined ceiling over one shared denominator', () => {
+    // All five suggestions share a denominator, so the combined figure is a
+    // single larger numerator rather than five independent jumps. Asserting the
+    // arithmetic directly, because comparing against the summed gains is not a
+    // reliable invariant once each gain has been rounded to a whole percent.
     const analysis = analyzeAts(RESUME, JD);
-    const naive = analysis.score + analysis.suggestions.reduce((s, x) => s + x.gain, 0);
-    const actual = projectedScoreWithAll(analysis);
 
-    expect(actual).toBeGreaterThanOrEqual(analysis.score);
-    expect(actual).toBeLessThanOrEqual(100);
-    if (analysis.suggestions.length > 1) expect(actual).toBeLessThanOrEqual(naive);
+    const suggestedWeight = analysis.suggestions.reduce((sum, suggestion) => {
+      const gap = analysis.missing.find((entry) => entry.term === suggestion.term)!;
+      return sum + gap.weight;
+    }, 0);
+    const expected = Math.round(
+      ((analysis.matchedWeight + suggestedWeight) / analysis.totalWeight) * 100,
+    );
+
+    expect(projectedScoreWithAll(analysis)).toBe(expected);
+    expect(projectedScoreWithAll(analysis)).toBeLessThanOrEqual(100);
   });
 
   it('offers nothing to add when everything is already covered', () => {
